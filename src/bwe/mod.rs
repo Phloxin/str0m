@@ -302,8 +302,12 @@ impl SendSideBandwidthEstimator {
         do_probe: bool,
         now: Instant,
     ) -> Option<ProbeClusterConfig> {
-        self.delay_controller
-            .handle_timeout(self.acked_bitrate_estimator.current_estimate(), now);
+        // This runs on every timeout of the Rtc, the pacer's included. The delay controller
+        // has a timer of its own and must only be advanced when that is due.
+        if now >= self.delay_controller.poll_timeout() {
+            self.delay_controller
+                .handle_timeout(self.acked_bitrate_estimator.current_estimate(), now);
+        }
 
         // Update probe control with desired bitrate.
         self.probe_control.set_desired_bitrate(desired_bitrate);
